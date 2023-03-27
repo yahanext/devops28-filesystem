@@ -71,12 +71,21 @@
 1. Используя `fdisk`, разбейте первый диск на два раздела: 2 Гб и оставшееся пространство.
 
 1. Используя `sfdisk`, перенесите эту таблицу разделов на второй диск.
-
+```
+fdisk создал два раздела  /dev/sdb1 /dev/sdb2
+командой sfdisk -d /dev/sdb | sfdisk /dev/sdc перенес таблицу разделов
 1. Соберите `mdadm` RAID1 на паре разделов 2 Гб.
+root@sysadm-fs:/home/vagrant# mdadm --create --verbose /dev/md0 --level=1  --raid-devices=2 /dev/sdc1 /dev/sdb1
+
 
 1. Соберите `mdadm` RAID0 на второй паре маленьких разделов.
+root@sysadm-fs:/home/vagrant# mdadm --create --verbose /dev/md1 --level=0  --raid-devices=2 /dev/sdc2 /dev/sdb2
+root@sysadm-fs:/home/vagrant# mdadm --detail --scan > /etc/mdadm/mdadm.conf
+
+
 
 1. Создайте два независимых PV на получившихся md-устройствах.
+
 
 1. Создайте общую volume-group на этих двух PV.
 
