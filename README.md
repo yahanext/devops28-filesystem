@@ -74,22 +74,22 @@
 ```
 fdisk создал два раздела  /dev/sdb1 /dev/sdb2
 командой sfdisk -d /dev/sdb | sfdisk /dev/sdc перенес таблицу разделов
+```
 1. Соберите `mdadm` RAID1 на паре разделов 2 Гб.
-root@sysadm-fs:/home/vagrant# mdadm --create --verbose /dev/md0 --level=1  --raid-devices=2 /dev/sdc1 /dev/sdb1
-
-
-1. Соберите `mdadm` RAID0 на второй паре маленьких разделов.
-root@sysadm-fs:/home/vagrant# mdadm --create --verbose /dev/md1 --level=0  --raid-devices=2 /dev/sdc2 /dev/sdb2
-root@sysadm-fs:/home/vagrant# mdadm --detail --scan > /etc/mdadm/mdadm.conf
-
-
-
+2. Соберите `mdadm` RAID0 на второй паре маленьких разделов.
 1. Создайте два независимых PV на получившихся md-устройствах.
-
-
+```
+root@sysadm-fs:/home/vagrant# pvcreate /dev/md127
+root@sysadm-fs:/home/vagrant# pvcreate /dev/md126
+```
 1. Создайте общую volume-group на этих двух PV.
-
+```
+root@sysadm-fs:/home/vagrant# vgcreate vg00 /dev/md127 /dev/md126
+```
 1. Создайте LV размером 100 Мб, указав его расположение на PV с RAID0.
+```
+root@sysadm-fs:/home/vagrant# lvcreate -L100 -n lv00 vg00 /dev/md127
+```
 
 1. Создайте `mkfs.ext4` ФС на получившемся LV.
 
@@ -98,6 +98,34 @@ root@sysadm-fs:/home/vagrant# mdadm --detail --scan > /etc/mdadm/mdadm.conf
 1. Поместите туда тестовый файл, например, `wget https://mirror.yandex.ru/ubuntu/ls-lR.gz -O /tmp/new/test.gz`.
 
 1. Прикрепите вывод `lsblk`.
+```
+root@sysadm-fs:/home/vagrant# lsblk
+NAME                      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINT
+loop0                       7:0    0   62M  1 loop  /snap/core20/1611
+loop1                       7:1    0 67.8M  1 loop  /snap/lxd/22753
+loop2                       7:2    0 91.9M  1 loop  /snap/lxd/24061
+loop3                       7:3    0 49.9M  1 loop  /snap/snapd/18596
+loop4                       7:4    0 63.3M  1 loop  /snap/core20/1852
+sda                         8:0    0   64G  0 disk  
+├─sda1                      8:1    0    1M  0 part  
+├─sda2                      8:2    0    2G  0 part  /boot
+└─sda3                      8:3    0   62G  0 part  
+  └─ubuntu--vg-ubuntu--lv 253:0    0   31G  0 lvm   /
+sdb                         8:16   0  2.5G  0 disk  
+├─sdb1                      8:17   0    2G  0 part  
+│ └─md126                   9:126  0    2G  0 raid1 
+└─sdb2                      8:18   0  511M  0 part  
+  └─md127                   9:127  0 1018M  0 raid0 
+    └─vg00-lv00           253:1    0  100M  0 lvm   /tmp/new
+sdc                         8:32   0  2.5G  0 disk  
+├─sdc1                      8:33   0    2G  0 part  
+│ └─md126                   9:126  0    2G  0 raid1 
+└─sdc2                      8:34   0  511M  0 part  
+  └─md127                   9:127  0 1018M  0 raid0 
+    └─vg00-lv00           253:1    0  100M  0 lvm   /tmp/new
+root@sysadm-fs:/home/vagrant# 
+```
+
 
 1. Протестируйте целостность файла:
 
@@ -108,10 +136,21 @@ root@sysadm-fs:/home/vagrant# mdadm --detail --scan > /etc/mdadm/mdadm.conf
     ```
 
 1. Используя pvmove, переместите содержимое PV с RAID0 на RAID1.
+```
+root@sysadm-fs:/home/vagrant# pvmove /dev/md127 /dev/md126
+  /dev/md127: Moved: 12.00%
+  /dev/md127: Moved: 100.00%
+root@sysadm-fs:/home/vagrant# 
+```
+
 
 1. Сделайте `--fail` на устройство в вашем RAID1 md.
 
 1. Подтвердите выводом `dmesg`, что RAID1 работает в деградированном состоянии.
+[ 6049.196594] md/raid1:md126: Disk failure on sdc1, disabling device.
+               md/raid1:md126: Operation continuing on 1 devices.
+root@sysadm-fs:/home/vagrant# 
+
 
 1. Протестируйте целостность файла — он должен быть доступен несмотря на «сбойный» диск:
 
@@ -120,6 +159,17 @@ root@sysadm-fs:/home/vagrant# mdadm --detail --scan > /etc/mdadm/mdadm.conf
     root@vagrant:~# echo $?
     0
     ```
+    
+    
+   ```
+   [ 6049.196594] md/raid1:md126: Disk failure on sdc1, disabling device.
+               md/raid1:md126: Operation continuing on 1 devices.
+root@sysadm-fs:/home/vagrant# gzip -t /tmp/new/test.gz
+root@sysadm-fs:/home/vagrant# echo $?
+0
+root@sysadm-fs:/home/vagrant# 
+
+```
 
 1. Погасите тестовый хост — `vagrant destroy`.
  
