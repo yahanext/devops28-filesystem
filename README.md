@@ -155,15 +155,8 @@ root@sysadm-fs:/home/vagrant#
 ```
 
 1. Протестируйте целостность файла — он должен быть доступен несмотря на «сбойный» диск:
-
-    ```bash
-    root@vagrant:~# gzip -t /tmp/new/test.gz
-    root@vagrant:~# echo $?
-    0
-    ```
-    
-    
-   ```
+  
+```
    [ 6049.196594] md/raid1:md126: Disk failure on sdc1, disabling device.
                md/raid1:md126: Operation continuing on 1 devices.
 root@sysadm-fs:/home/vagrant# gzip -t /tmp/new/test.gz
