@@ -147,10 +147,12 @@ root@sysadm-fs:/home/vagrant#
 1. Сделайте `--fail` на устройство в вашем RAID1 md.
 
 1. Подтвердите выводом `dmesg`, что RAID1 работает в деградированном состоянии.
+
+```
 [ 6049.196594] md/raid1:md126: Disk failure on sdc1, disabling device.
                md/raid1:md126: Operation continuing on 1 devices.
 root@sysadm-fs:/home/vagrant# 
-
+```
 
 1. Протестируйте целостность файла — он должен быть доступен несмотря на «сбойный» диск:
 
